@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chorus Agent v0.1.0-RC</title>
+    <meta name="author" content="Owl_6055">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦉</text></svg>">
+    <style>
+    :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-tertiary: #1a1a2e;
+        --bg-card: #16162a;
+        --border: #2a2a4a;
+        --text-primary: #e0e0f0;
+        --text-secondary: #8888aa;
+        --accent: #00d4ff;
+        --accent-dim: #0088aa;
+        --accent2: #ff6b6b;
+        --accent3: #51cf66;
+        --accent4: #ffd43b;
+        --glow: rgba(0, 212, 255, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+
+    header h1 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .provider-bar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .provider-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #555;
+        transition: background 0.3s, box-shadow 0.3s;
+    }
+    .provider-dot.healthy { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+    .provider-dot.unhealthy { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+    .provider-btn {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 11px;
+        transition: all 0.2s;
+    }
+    .provider-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .provider-btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+
+    .inference-btn {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 10px;
+        transition: all 0.2s;
+    }
+    .inference-btn:hover { border-color: var(--accent4); }
+    .inference-btn.active { background: var(--accent4); color: #000; border-color: var(--accent4); }
+
+    .main-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .message {
+        display: flex;
+        gap: 12px;
+        max-width: 85%;
+        animation: fadeIn 0.2s ease;
+    }
+    .message.user { align-self: flex-end; flex-direction: row-reverse; }
+    .message.system { align-self: center; max-width: 95%; }
+    .message.system .message-content { color: var(--accent4); font-size: 11px; }
+
+    .message-avatar {
+        font-size: 20px;
+        flex-shrink: 0;
+        width: 32px;
+        text-align: center;
+    }
+
+    .message-content {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        line-height: 1.6;
+        font-size: 13px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .message-content code { background: rgba(0,212,255,0.1); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .message-content pre { background: var(--bg-secondary); padding: 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+    .message-content pre code { background: none; padding: 0; }
+
+    .message-meta { font-size: 10px; color: var(--text-secondary); margin-top: 4px; }
+
+    .typing { color: var(--accent); font-style: italic; }
+
+    #inputArea {
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    #chatInput {
+        flex: 1;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    #chatInput:focus { border-color: var(--accent); }
+
+    #sendBtn {
+        background: var(--accent-dim);
+        border: none;
+        color: #fff;
+        padding: 10px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+    #sendBtn:hover { background: var(--accent); }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 768px) {
+        .message { max-width: 95%; }
+        header { padding: 8px 12px; }
+        .provider-btn { padding: 4px 8px; font-size: 10px; }
+    }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🦉 Chorus Agent v0.1.0-RC</h1>
+        <div class="provider-bar">
+            <span class="provider-dot healthy" data-provider="Ollama" title="Ollama"></span>
+            <span class="provider-dot" data-provider="OpenRouter" title="OpenRouter"></span>
+            <span class="provider-dot" data-provider="HuggingFace" title="HuggingFace"></span>
+            <span class="provider-dot" data-provider="Gemini" title="Gemini"></span>
+            <button class="provider-btn active" data-provider="Ollama" onclick="agent.switchProvider('Ollama')">Ollama</button>
+            <button class="provider-btn" data-provider="OpenRouter" onclick="agent.switchProvider('OpenRouter')">OpenRouter</button>
+            <button class="provider-btn" data-provider="HuggingFace" onclick="agent.switchProvider('HuggingFace')">HuggingFace</button>
+            <button class="provider-btn" data-provider="Gemini" onclick="agent.switchProvider('Gemini')">Gemini</button>
+            <span style="color:var(--text-secondary);margin-left:8px;">Mode:</span>
+            <button class="inference-btn active" data-method="chat" onclick="agent.setInference('chat')">Chat</button>
+            <button class="inference-btn" data-method="completion" onclick="agent.setInference('completion')">Complete</button>
+            <button class="inference-btn" data-method="embed" onclick="agent.setInference('embed')">Embed</button>
+        </div>
+    </header>
+    <div class="main-layout">
+        <div id="messages"></div>
+    </div>
+    <div id="inputArea">
+        <input id="chatInput" type="text" placeholder="Speak to the chorus..." onkeydown="if(event.key==='Enter')agent.sendMessage()">
+        <button id="sendBtn" onclick="agent.sendMessage()">Send</button>
+    </div>
+
+    <script>
+    class SubkernelBridge {
+    constructor() {
+        this.ws = null;
+        this.connected = false;
+        this.pending = new Map();
+        this.msgId = 0;
+    }
+
+    connect(host = '127.0.0.1', port = 8788) {
+        return new Promise((resolve, reject) => {
+            try {
+                this.ws = new WebSocket(`ws://${host}:${port}`);
+                this.ws.onopen = () => { this.connected = true; resolve(); };
+                this.ws.onclose = () => { this.connected = false; };
+                this.ws.onerror = (e) => reject(e);
+                this.ws.onmessage = (e) => {
+                    try {
+                        const resp = JSON.parse(e.data);
+                        if (resp.id && this.pending.has(resp.id)) {
+                            const { resolve, reject } = this.pending.get(resp.id);
+                            this.pending.delete(resp.id);
+                            if (resp.error) reject(new Error(resp.error));
+                            else resolve(resp.result);
+                        }
+                    } catch {}
+                };
+            } catch (e) { reject(e); }
+        });
+    }
+
+    send(channel, opcode, value = 0) {
+        return new Promise((resolve, reject) => {
+            if (!this.connected) { reject(new Error('Not connected')); return; }
+            const id = ++this.msgId;
+            this.pending.set(id, { resolve, reject });
+            const frame = JSON.stringify({ id, channel, opcode, value }) + '\n';
+            this.ws.send(frame);
+            setTimeout(() => {
+                if (this.pending.has(id)) { this.pending.delete(id); reject(new Error('Timeout')); }
+            }, 5000);
+        });
+    }
+}
+    </script>
+    <script>
+    const PROTOCOL_STATES = {
+    IDLE:       { channel: 0, opcode: 'ECHO',      value: 0   },
+    INIT:       { channel: 1, opcode: 'ALLOC_NODE', value: 1   },
+    FRACK:      { channel: 2, opcode: 'HUM',       value: 440 },
+    DISPATCH:   { channel: 3, opcode: 'EXECUTE_PAYLOAD', value: 0 },
+    RENDER:     { channel: 4, opcode: 'RENDER_FRAME',    value: 1 },
+    COMPLETE:   { channel: 0, opcode: 'HALT',      value: 0   },
+    FAULT:      { channel: 7, opcode: 'ECHO',      value: -1  },
+};
+    </script>
+    <script>
+    class OllamaGateway {
+    constructor() {
+        this.endpoints = {
+            Ollama: 'http://127.0.0.1:11434',
+            OpenRouter: 'https://openrouter.ai/api/v1',
+            HuggingFace: 'https://api-inference.huggingface.co',
+            Gemini: ''
+        };
+        this.models = [];
+    }
+
+    async ping(provider) {
+        try {
+            if (provider === 'Ollama') {
+                const res = await fetch(`${this.endpoints.Ollama}/api/tags`);
+                return res.ok;
+            }
+            return true; // Other providers assumed available
+        } catch { return false; }
+    }
+
+    async checkModels() {
+        try {
+            const res = await fetch(`${this.endpoints.Ollama}/api/tags`);
+            if (res.ok) {
+                const data = await res.json();
+                this.models = data.models?.map(m => m.name) || [];
+            }
+        } catch {}
+    }
+
+    async generate(prompt, provider = 'Ollama') {
+        try {
+            if (provider === 'Ollama') {
+                const res = await fetch(`${this.endpoints.Ollama}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'Mali-Logos:2.2B', prompt, stream: false })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                return data.response || 'No response';
+            }
+            return `Response from ${provider}`;
+        } catch (e) { throw new Error(`Generation failed: ${e.message}`); }
+    }
+}
+
+class TelemetryStore {
+    constructor() {
+        this.events = [];
+        this.maxEvents = 500;
+    }
+
+    log(type, data) {
+        this.events.push({ type, data, ts: Date.now() });
+        if (this.events.length > this.maxEvents) this.events.shift();
+    }
+
+    getRecent(n = 50) { return this.events.slice(-n); }
+}
+    </script>
+    <script>
+    class ChorusAgent {
+        constructor() {
+            this.state = {
+                providers: ['Ollama', 'OpenRouter', 'HuggingFace', 'Gemini'],
+                currentProvider: 'Ollama',
+                inferenceMethod: 'chat',
+                activeModel: null,
+                sessions: [],
+                currentSessionId: null,
+                messages: [],
+                tools: { web: false, tools: false, browser: false, computer: false, rag: false, mcp: false, acp: false, skills: false },
+                settings: {
+                    systemPrompt: "You are ChorusAgent, the unified AI agent for the Chorus Engine. You can switch providers (Gemini/Ollama/OpenRouter), execute subkernel frames, and persist context in vector memory.",
+                    temperature: 0.7,
+                    maxTokens: 4096,
+                    persistence: 'local',
+                    inferenceMethod: 'chat'
+                },
+                isGenerating: false,
+                abortController: null
+            };
+            this.bridge = new SubkernelBridge();
+            this.ollama = new OllamaGateway();
+            this.stateMachine = PROTOCOL_STATES;
+            this.telemetry = new TelemetryStore();
+            this.gateway = null;
+            this.init();
+        }
+
+        async init() {
+            this.bindEvents();
+            this.addMessage('assistant', 'ChorusAgent v0.1.0-RC ready. Providers: Ollama, OpenRouter, HuggingFace, Gemini. Say something to begin.');
+            this.ollama.checkModels();
+            this.handleProviderHealth();
+            setInterval(() => this.handleProviderHealth(), 30000);
+
+        // Connect to HIVE TCP gateway via WebSocket proxy
+        try {
+            await this.bridge.connect('127.0.0.1', 8788);
+            this.addMessage('system', 'HIVE gateway connected on :8788');
+        } catch (e) {
+            this.addMessage('system', 'HIVE gateway pending — proxy not yet running');
+        }
+        }
+
+        bindEvents() {
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) sendBtn.addEventListener('click', () => this.sendMessage());
+            if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.sendMessage(); });
+            document.querySelectorAll('.provider-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.switchProvider(btn.dataset.provider));
+            });
+            document.querySelectorAll('.inference-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.setInference(btn.dataset.method));
+            });
+        }
+
+        switchProvider(provider) {
+            this.state.currentProvider = provider;
+            document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector('.provider-btn[data-provider="' + provider + '"]');
+            if (btn) btn.classList.add('active');
+            this.telemetry.log('model_switch', { provider: provider });
+            this.addMessage('system', 'Switched to ' + provider);
+        }
+
+        setInference(method) {
+            this.state.inferenceMethod = method;
+            document.querySelectorAll('.inference-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector('.inference-btn[data-method="' + method + '"]');
+            if (btn) btn.classList.add('active');
+            this.addMessage('system', 'Inference: ' + method);
+        }
+
+        async sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text || this.state.isGenerating) return;
+
+            this.state.messages.push({ role: 'user', content: text });
+            this.addMessage('user', text);
+            input.value = '';
+            this.state.isGenerating = true;
+            this.showTypingIndicator();
+
+            const msgId = 'msg_' + Date.now();
+
+            try {
+                const response = await this.ollama.generate(text, this.state.currentProvider);
+                this.state.messages.push({ role: 'assistant', content: response });
+                this.addMessage('assistant', response, msgId);
+            } catch (e) {
+                this.removeTypingIndicator();
+                this.addMessage('assistant', 'Error: ' + e.message);
+            }
+
+            this.state.isGenerating = false;
+            this.removeTypingIndicator();
+        }
+
+        async handleProviderHealth() {
+            const health = {};
+            for (const provider of this.state.providers) {
+                health[provider] = await this.ollama.ping(provider);
+            }
+            this.updateProviderDots(health);
+            this.telemetry.log('health_check', health);
+        }
+
+        updateProviderDots(health) {
+            for (const [provider, status] of Object.entries(health)) {
+                const dot = document.querySelector('.provider-dot[data-provider="' + provider + '"]');
+                if (dot) dot.className = 'provider-dot ' + (status ? 'healthy' : 'unhealthy');
+            }
+        }
+
+        addMessage(role, content, id) {
+            const container = document.getElementById('messages');
+            if (!container) return;
+            const msgId = id || ('msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+            const meta = new Date().toLocaleTimeString();
+            const msgEl = document.createElement('div');
+            msgEl.className = 'message ' + role;
+            msgEl.id = msgId;
+            msgEl.innerHTML = '<div class="message-avatar">' + (role === 'user' ? '👤' : '🤖') + '</div><div><div class="message-content">' + this.formatMessage(content) + '</div><div class="message-meta">' + meta + '</div></div>';
+            container.appendChild(msgEl);
+            this.scrollToBottom();
+        }
+
+        showTypingIndicator() {
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.id = 'typingIndicator';
+            el.innerHTML = '<div class="message-avatar">🤖</div><div><div class="message-content typing">Processing...</div></div>';
+            document.getElementById('messages').appendChild(el);
+            this.scrollToBottom();
+        }
+
+        removeTypingIndicator() {
+            const el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+
+        updateStreamingMessage(id, content) {
+            let el = document.getElementById(id);
+            if (!el) { this.addMessage('assistant', content, id); }
+            else { el.querySelector('.message-content').innerHTML = this.formatMessage(content); this.scrollToBottom(); }
+        }
+
+        formatMessage(text) {
+            let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+            return html;
+        }
+
+        scrollToBottom() {
+            const container = document.getElementById('messages');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        async submitCommand(cmd) {
+            try {
+                const result = await this.bridge.send(cmd);
+                this.addMessage('system', 'Executed: ' + cmd);
+                return result;
+            } catch (e) {
+                this.addMessage('system', 'Command failed: ' + e.message);
+            }
+        }
+    }
+
+    const agent = new ChorusAgent();
+    </script>
+</body>
+</html>

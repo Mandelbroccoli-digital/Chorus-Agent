@@ -2,7 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Plus } from 'lucide-react';
 import useSettingsStore from '../../../stores/settingsStore.js';
 
-export function ChatPane({ messages, onSend, generating, providers, currentProvider, currentModel, onProviderSwitch }) {
+export function ChatPane({
+  messages,
+  onSend,
+  generating,
+  providers,
+  currentProvider,
+  currentModel,
+  onProviderSwitch,
+}) {
   const [input, setInput] = useState('');
   const bottomRef = useRef(null);
   const { theme } = useSettingsStore();
@@ -34,17 +42,22 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      {/* Chat header */}
       <div className={`flex items-center justify-between px-4 py-2 ${headerBgClass} border-b ${borderClass}`}>
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium truncate max-w-[400px] ${theme === 'light' ? 'text-gray-900' : 'text-[#e0e0f0]'}`}>
-            {currentModel || 'Model'}
-          </span>
+          <div className="flex flex-col">
+            <span className={`text-[10px] uppercase tracking-wide ${theme === 'light' ? 'text-gray-500' : 'text-[#8888aa]'}`}>
+              Active model
+            </span>
+            <span className={`text-sm font-medium truncate max-w-[220px] ${theme === 'light' ? 'text-gray-900' : 'text-[#e0e0f0]'}`}>
+              {currentModel || 'Model'}
+            </span>
+          </div>
           <button className={`transition-colors ${theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-[#8888aa] hover:text-[#00d4ff]'}`}>
             <Plus size={14} />
           </button>
         </div>
-        <div className="flex gap-1">
+
+        <div className="flex items-center gap-2">
           {providers.map((p) => (
             <button
               key={p}
@@ -56,6 +69,26 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
               {p}
             </button>
           ))}
+
+          <select
+            value={currentModel}
+            onChange={(e) => {
+              const nextModel = e.target.value;
+              if (nextModel) {
+                const selectedModel = { ...useSettingsStore.getState().selectedModels };
+                selectedModel[currentProvider] = nextModel;
+                useSettingsStore.setState({ selectedModels: selectedModel });
+                useSettingsStore.getState().setSelectedModel(currentProvider, nextModel);
+              }
+            }}
+            className={`ml-2 px-2 py-1 text-[10px] rounded border outline-none ${theme === 'light' ? 'bg-white border-gray-300 text-gray-900' : 'bg-[#1a1a2e] border-[#2a2a4a] text-[#e0e0f0]'}`}
+          >
+            {(useSettingsStore.getState().selectedModels[currentProvider] ? [
+              useSettingsStore.getState().selectedModels[currentProvider],
+            ] : []).concat(
+              (useSettingsStore.getState().selectedModels[currentProvider] ? [] : [])
+            )}
+          </select>
         </div>
       </div>
 
@@ -65,6 +98,7 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
             The soil is tilled. The network is listening. Speak to the chorus.
           </div>
         )}
+
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             <div className={`max-w-[80%] rounded-lg p-3 text-sm border ${
@@ -77,6 +111,7 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
             </div>
           </div>
         ))}
+
         {generating && (
           <div className="flex gap-3">
             <div className={`rounded-lg p-3 text-sm italic ${theme === 'light' ? 'bg-gray-100 border border-gray-300 text-blue-500' : 'bg-[#16162a] border border-[#2a2a4a] text-[#00d4ff]'}`}>
@@ -84,13 +119,15 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
             </div>
           </div>
         )}
+
         <div ref={bottomRef} />
       </div>
 
       <form onSubmit={handleSubmit} className={`p-3 ${headerBgClass} border-t ${borderClass} flex gap-2`}>
-        <button className={`p-2 transition-colors ${theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-[#8888aa] hover:text-[#e0e0f0]'}`}>
+        <button type="button" className={`p-2 transition-colors ${theme === 'light' ? 'text-gray-500 hover:text-gray-700' : 'text-[#8888aa] hover:text-[#e0e0f0]'}`}>
           <Paperclip size={16} />
         </button>
+
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -98,6 +135,7 @@ export function ChatPane({ messages, onSend, generating, providers, currentProvi
           className={`flex-1 px-3 py-2 rounded-lg text-sm outline-none border transition-colors ${inputBgClass}`}
           disabled={generating}
         />
+
         <button
           type="submit"
           disabled={generating || !input.trim()}
